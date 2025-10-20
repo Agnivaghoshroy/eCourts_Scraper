@@ -1,8 +1,3 @@
-
-  # eCourts Scraper Script
-
-  This is a code bundle for eCourts Scraper Script. The original project is available at https://www.figma.com/design/qQ0brPeP22anHo6eY3OCND/eCourts-Scraper-Script.
-
   ## Running the code
 
     # eCourts Scraper Script
