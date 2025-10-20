@@ -1,0 +1,15 @@
+node_modules/
+dist/
+build/
+.env
+.env.local
+.env.*.local
+npm-debug.log*
+package-lock.json
+.DS_Store
+.vscode/
+.idea/
+coverage/
+*.tsbuildinfo
+.npm
+/node_modules/.vite

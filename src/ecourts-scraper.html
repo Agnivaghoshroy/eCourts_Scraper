@@ -1,0 +1,1196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>eCourts India Cause List Scraper</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --font-size: 16px;
+            --radius: 0.625rem;
+        }
+
+        html {
+            font-size: var(--font-size);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.5;
+        }
+
+        /* Custom animations */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes shimmer {
+            0% {
+                background-position: -1000px 0;
+            }
+            100% {
+                background-position: 1000px 0;
+            }
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        @keyframes bounce {
+            0%, 100% {
+                transform: translateY(-25%);
+                animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
+            }
+            50% {
+                transform: translateY(0);
+                animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
+            }
+        }
+
+        .animate-pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        .animate-spin {
+            animation: spin 1s linear infinite;
+        }
+
+        .animate-bounce {
+            animation: bounce 1s infinite;
+        }
+
+        .animate-fade-in {
+            animation: fadeIn 0.3s ease-in-out both;
+        }
+
+        .delay-1000 {
+            animation-delay: 1s;
+        }
+
+        .delay-500 {
+            animation-delay: 0.5s;
+        }
+
+        /* Glass morphism effect */
+        .glass {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.5);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(59, 130, 246, 0.5);
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(59, 130, 246, 0.7);
+        }
+
+        /* Toast container */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .toast {
+            background: rgba(30, 41, 59, 0.95);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: 8px;
+            padding: 16px 20px;
+            color: white;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 300px;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        .toast.success {
+            border-color: rgba(34, 197, 94, 0.5);
+        }
+
+        .toast.error {
+            border-color: rgba(239, 68, 68, 0.5);
+        }
+
+        .toast.info {
+            border-color: rgba(59, 130, 246, 0.5);
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slideOut {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(400px);
+                opacity: 0;
+            }
+        }
+
+        .toast.removing {
+            animation: slideOut 0.3s ease-in forwards;
+        }
+
+        /* Select dropdown styling */
+        select {
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2393c5fd'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 0.5rem center;
+            background-size: 1.5em 1.5em;
+            padding-right: 2.5rem;
+        }
+
+        /* Input date styling */
+        input[type="date"]::-webkit-calendar-picker-indicator {
+            filter: invert(0.6) sepia(1) saturate(5) hue-rotate(175deg);
+            cursor: pointer;
+        }
+
+        /* Loading spinner */
+        .loader {
+            border: 4px solid rgba(59, 130, 246, 0.3);
+            border-radius: 50%;
+            border-top: 4px solid #3b82f6;
+            width: 64px;
+            height: 64px;
+            animation: spin 1s linear infinite;
+        }
+
+        /* Table styling */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th {
+            text-align: left;
+            padding: 12px;
+            font-weight: 500;
+        }
+
+        td {
+            padding: 12px;
+        }
+
+        tr {
+            border-bottom: 1px solid rgba(59, 130, 246, 0.1);
+        }
+
+        tr:hover {
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        /* Custom checkbox */
+        input[type="checkbox"] {
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(59, 130, 246, 0.5);
+            border-radius: 4px;
+            background: transparent;
+            cursor: pointer;
+            position: relative;
+        }
+
+        input[type="checkbox"]:checked {
+            background: #2563eb;
+            border-color: #2563eb;
+        }
+
+        input[type="checkbox"]:checked::after {
+            content: '✓';
+            position: absolute;
+            color: white;
+            font-size: 14px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        /* Button hover effects */
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Hidden class */
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 min-h-screen">
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Animated Background Elements -->
+    <div class="absolute inset-0 overflow-hidden pointer-events-none">
+        <div class="absolute top-0 left-1/4 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl animate-pulse"></div>
+        <div class="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        <div class="absolute top-1/2 left-1/2 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl animate-pulse delay-500"></div>
+    </div>
+
+    <!-- Header -->
+    <header class="relative border-b border-white/10 glass">
+        <div class="container mx-auto px-4 py-8">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <div class="relative group">
+                        <div class="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl blur opacity-75 group-hover:opacity-100 transition duration-300"></div>
+                        <div class="relative bg-gradient-to-r from-blue-600 to-purple-600 p-3 rounded-2xl">
+                            <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"></path>
+                            </svg>
+                        </div>
+                    </div>
+                    <div>
+                        <h1 class="text-4xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-cyan-400 bg-clip-text text-transparent">
+                            eCourts India Cause List Scraper
+                        </h1>
+                        <p class="text-blue-200/80 text-sm mt-1 flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z"></path>
+                            </svg>
+                            Real-time court listings and cause list downloads
+                        </p>
+                    </div>
+                </div>
+                <div class="hidden md:flex items-center gap-3">
+                    <div class="flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 glass">
+                        <div class="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                        <span class="text-white/80 text-sm">Live</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="relative container mx-auto px-4 py-12">
+        <div class="grid lg:grid-cols-2 gap-8">
+            <!-- Form Section -->
+            <div class="space-y-6">
+                <div class="bg-gradient-to-br from-slate-900/90 to-blue-950/90 border border-blue-500/20 glass shadow-2xl rounded-xl p-6 hover:shadow-blue-500/10 transition-all duration-300">
+                    <div class="relative overflow-hidden mb-6">
+                        <div class="flex items-center gap-3">
+                            <div class="p-2 bg-blue-500/20 rounded-lg">
+                                <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                </svg>
+                            </div>
+                            <div>
+                                <h2 class="text-xl font-medium text-white">Fetch Cause List</h2>
+                                <p class="text-blue-200/70 text-sm">Select court details and date to download cause list</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-5">
+                        <!-- State Selector -->
+                        <div class="space-y-2">
+                            <label for="state" class="text-blue-200 flex items-center gap-2 block">
+                                State
+                                <span class="text-blue-400/60 text-xs">*</span>
+                            </label>
+                            <select 
+                                id="state" 
+                                class="w-full bg-slate-900/50 border border-blue-500/30 text-white rounded-lg px-4 py-3 hover:border-blue-400/50 transition-all duration-300 focus:ring-2 focus:ring-blue-500/50 focus:outline-none"
+                            >
+                                <option value="">Select State</option>
+                            </select>
+                        </div>
+
+                        <!-- District Selector -->
+                        <div class="space-y-2">
+                            <label for="district" class="text-blue-200 flex items-center gap-2 block">
+                                District
+                                <span class="text-blue-400/60 text-xs">*</span>
+                            </label>
+                            <select 
+                                id="district" 
+                                class="w-full bg-slate-900/50 border border-blue-500/30 text-white rounded-lg px-4 py-3 hover:border-blue-400/50 transition-all duration-300 focus:ring-2 focus:ring-blue-500/50 focus:outline-none"
+                                disabled
+                            >
+                                <option value="">Select state first</option>
+                            </select>
+                        </div>
+
+                        <!-- Court Complex Selector -->
+                        <div class="space-y-2">
+                            <label for="complex" class="text-blue-200 flex items-center gap-2 block">
+                                Court Complex
+                                <span class="text-blue-400/60 text-xs">*</span>
+                            </label>
+                            <select 
+                                id="complex" 
+                                class="w-full bg-slate-900/50 border border-blue-500/30 text-white rounded-lg px-4 py-3 hover:border-blue-400/50 transition-all duration-300 focus:ring-2 focus:ring-blue-500/50 focus:outline-none"
+                                disabled
+                            >
+                                <option value="">Select district first</option>
+                            </select>
+                        </div>
+
+                        <!-- Court Name Selector -->
+                        <div class="space-y-2">
+                            <label for="court" class="text-blue-200 flex items-center gap-2 block">
+                                Court Name
+                                <span id="courtRequired" class="text-blue-400/60 text-xs">*</span>
+                            </label>
+                            <select 
+                                id="court" 
+                                class="w-full bg-slate-900/50 border border-blue-500/30 text-white rounded-lg px-4 py-3 hover:border-blue-400/50 transition-all duration-300 focus:ring-2 focus:ring-blue-500/50 focus:outline-none"
+                                disabled
+                            >
+                                <option value="">Select court complex first</option>
+                            </select>
+                        </div>
+
+                        <!-- Download All Checkbox -->
+                        <div class="flex items-center space-x-3 pt-3 px-4 py-3 rounded-lg bg-blue-500/5 border border-blue-500/20 hover:bg-blue-500/10 transition-all duration-300">
+                            <input 
+                                type="checkbox" 
+                                id="downloadAll"
+                                disabled
+                            />
+                            <label for="downloadAll" class="text-sm cursor-pointer text-blue-200/90 flex-1">
+                                Download all courts in this complex
+                            </label>
+                        </div>
+
+                        <!-- Date Selector -->
+                        <div class="space-y-2">
+                            <label for="date" class="flex items-center gap-2 text-blue-200 block">
+                                <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+                                </svg>
+                                Cause List Date
+                                <span class="text-blue-400/60 text-xs">*</span>
+                            </label>
+                            <input
+                                id="date"
+                                type="date"
+                                class="w-full bg-slate-900/50 border border-blue-500/30 text-white rounded-lg px-4 py-3 hover:border-blue-400/50 transition-all duration-300 focus:ring-2 focus:ring-blue-500/50 focus:outline-none"
+                            />
+                        </div>
+
+                        <!-- Submit Button -->
+                        <button 
+                            id="fetchButton"
+                            class="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white shadow-lg shadow-blue-500/50 hover:shadow-blue-500/70 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none mt-6 h-12 rounded-lg font-medium flex items-center justify-center gap-2"
+                            disabled
+                        >
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                            </svg>
+                            Download Cause List PDF
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Results Section -->
+            <div class="space-y-6">
+                <div id="resultsContainer" class="bg-gradient-to-br from-slate-900/90 to-blue-950/90 border border-blue-500/20 glass shadow-2xl rounded-xl p-6 hover:border-blue-400/30 transition-all duration-300">
+                    <div class="mb-6">
+                        <h2 class="text-xl font-medium text-white">Cause List Results</h2>
+                        <p class="text-blue-200/70 text-sm">Your results will appear here</p>
+                    </div>
+                    <div class="flex flex-col items-center justify-center py-16 text-center">
+                        <div class="relative">
+                            <div class="absolute inset-0 bg-blue-500/10 blur-2xl rounded-full transition-all duration-300"></div>
+                            <div class="bg-blue-500/10 p-6 rounded-2xl mb-6 transition-all duration-300 relative border border-blue-500/20">
+                                <svg class="w-16 h-16 text-blue-400/70 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                </svg>
+                            </div>
+                        </div>
+                        <p class="text-blue-200/80">No results yet</p>
+                        <p class="text-blue-300/50 text-sm mt-2 max-w-xs">
+                            Select court details and fetch cause list to see results
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Info Section -->
+        <div class="mt-12 p-8 bg-gradient-to-br from-blue-950/50 to-purple-950/50 border border-blue-500/20 glass rounded-xl shadow-2xl hover:border-blue-400/30 transition-all duration-300">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="p-2 bg-blue-500/20 rounded-lg">
+                    <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                    </svg>
+                </div>
+                <h3 class="text-xl font-medium text-white">How It Works</h3>
+            </div>
+            <div class="grid md:grid-cols-2 gap-4">
+                <div class="flex items-start gap-3 p-4 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-all duration-300">
+                    <svg class="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+                    </svg>
+                    <p class="text-blue-200/90 text-sm">Select State, District, Court Complex, and Court Name from cascading dropdowns</p>
+                </div>
+                <div class="flex items-start gap-3 p-4 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-all duration-300">
+                    <svg class="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z"></path>
+                    </svg>
+                    <p class="text-blue-200/90 text-sm">Choose a date to fetch the cause list</p>
+                </div>
+                <div class="flex items-start gap-3 p-4 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-all duration-300">
+                    <svg class="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"></path>
+                    </svg>
+                    <p class="text-blue-200/90 text-sm">Download individual court cause lists or all courts in a complex</p>
+                </div>
+                <div class="flex items-start gap-3 p-4 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition-all duration-300">
+                    <svg class="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path>
+                    </svg>
+                    <p class="text-blue-200/90 text-sm">All data is fetched in real-time from eCourts India services</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="relative mt-20 py-8 border-t border-white/10 glass">
+        <div class="container mx-auto px-4 text-center">
+            <p class="text-blue-200/60 text-sm">
+                Data source: <a href="https://services.ecourts.gov.in/ecourtindia_v6/" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:text-blue-300 transition-colors underline-offset-4 hover:underline">eCourts India</a>
+            </p>
+            <p class="mt-2 text-blue-200/40 text-sm">This tool is for educational and informational purposes only</p>
+        </div>
+    </footer>
+
+    <script>
+        // Toast Notification System
+        const toast = {
+            show: function(message, type = 'info') {
+                const container = document.getElementById('toastContainer');
+                const toastEl = document.createElement('div');
+                toastEl.className = `toast ${type}`;
+                
+                let icon = '';
+                if (type === 'success') {
+                    icon = '<svg class="w-5 h-5 text-green-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>';
+                } else if (type === 'error') {
+                    icon = '<svg class="w-5 h-5 text-red-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>';
+                } else {
+                    icon = '<svg class="w-5 h-5 text-blue-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>';
+                }
+                
+                toastEl.innerHTML = `
+                    ${icon}
+                    <span class="flex-1">${message}</span>
+                `;
+                
+                container.appendChild(toastEl);
+                
+                setTimeout(() => {
+                    toastEl.classList.add('removing');
+                    setTimeout(() => {
+                        container.removeChild(toastEl);
+                    }, 300);
+                }, 3000);
+            },
+            
+            success: function(message) {
+                this.show(message, 'success');
+            },
+            
+            error: function(message) {
+                this.show(message, 'error');
+            },
+            
+            info: function(message) {
+                this.show(message, 'info');
+            }
+        };
+
+        // Mock Data
+        const MOCK_STATES = [
+            { code: '1', name: 'Andhra Pradesh' },
+            { code: '2', name: 'Arunachal Pradesh' },
+            { code: '3', name: 'Assam' },
+            { code: '4', name: 'Bihar' },
+            { code: '5', name: 'Chhattisgarh' },
+            { code: '6', name: 'Delhi' },
+            { code: '7', name: 'Goa' },
+            { code: '8', name: 'Gujarat' },
+            { code: '9', name: 'Haryana' },
+            { code: '10', name: 'Himachal Pradesh' },
+            { code: '11', name: 'Jharkhand' },
+            { code: '12', name: 'Karnataka' },
+            { code: '13', name: 'Kerala' },
+            { code: '14', name: 'Madhya Pradesh' },
+            { code: '15', name: 'Maharashtra' },
+            { code: '16', name: 'Manipur' },
+            { code: '17', name: 'Meghalaya' },
+            { code: '18', name: 'Mizoram' },
+            { code: '19', name: 'Nagaland' },
+            { code: '20', name: 'Odisha' },
+            { code: '21', name: 'Punjab' },
+            { code: '22', name: 'Rajasthan' },
+            { code: '23', name: 'Sikkim' },
+            { code: '24', name: 'Tamil Nadu' },
+            { code: '25', name: 'Telangana' },
+            { code: '26', name: 'Tripura' },
+            { code: '27', name: 'Uttar Pradesh' },
+            { code: '28', name: 'Uttarakhand' },
+            { code: '29', name: 'West Bengal' }
+        ];
+
+        const MOCK_DISTRICTS = {
+            '6': [
+                { code: '6-1', name: 'Central Delhi' },
+                { code: '6-2', name: 'East Delhi' },
+                { code: '6-3', name: 'New Delhi' },
+                { code: '6-4', name: 'North Delhi' },
+                { code: '6-5', name: 'South Delhi' },
+                { code: '6-6', name: 'West Delhi' }
+            ],
+            '15': [
+                { code: '15-1', name: 'Mumbai City' },
+                { code: '15-2', name: 'Mumbai Suburban' },
+                { code: '15-3', name: 'Pune' },
+                { code: '15-4', name: 'Thane' },
+                { code: '15-5', name: 'Nagpur' }
+            ]
+        };
+
+        const MOCK_COMPLEXES = {
+            '6-3': [
+                { code: '6-3-1', name: 'Patiala House Courts Complex' },
+                { code: '6-3-2', name: 'Tis Hazari Courts Complex' },
+                { code: '6-3-3', name: 'Saket Courts Complex' },
+                { code: '6-3-4', name: 'Karkardooma Courts Complex' },
+                { code: '6-3-5', name: 'Rohini Courts Complex' }
+            ],
+            '15-3': [
+                { code: '15-3-1', name: 'Shivajinagar Court Complex' },
+                { code: '15-3-2', name: 'Civil Court Pune' }
+            ]
+        };
+
+        const MOCK_COURTS = {
+            '6-3-1': [
+                { code: '6-3-1-1', name: 'Court No. 1 - District Judge' },
+                { code: '6-3-1-2', name: 'Court No. 2 - Additional District Judge' },
+                { code: '6-3-1-3', name: 'Court No. 3 - Civil Judge' },
+                { code: '6-3-1-4', name: 'Court No. 4 - Metropolitan Magistrate' },
+                { code: '6-3-1-5', name: 'Court No. 5 - Special Court' }
+            ],
+            '6-3-2': [
+                { code: '6-3-2-1', name: 'Court No. 1 - District Judge' },
+                { code: '6-3-2-2', name: 'Court No. 2 - Additional Sessions Judge' },
+                { code: '6-3-2-3', name: 'Court No. 3 - Civil Judge Senior Division' }
+            ]
+        };
+
+        // Application State
+        const state = {
+            selectedState: '',
+            selectedDistrict: '',
+            selectedComplex: '',
+            selectedCourt: '',
+            selectedDate: new Date().toISOString().split('T')[0],
+            downloadAll: false,
+            loading: false,
+            results: []
+        };
+
+        // Helper Functions
+        function delay(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        function generateMockCauseList(courtCode, courtName, date) {
+            const caseTypes = ['CRL', 'CIV', 'FAM', 'ARB', 'COM'];
+            const numberOfCases = Math.floor(Math.random() * 15) + 5;
+            const results = [];
+
+            for (let i = 0; i < numberOfCases; i++) {
+                results.push({
+                    caseNumber: `${caseTypes[Math.floor(Math.random() * caseTypes.length)]}/${Math.floor(Math.random() * 9000) + 1000}/${new Date(date).getFullYear()}`,
+                    serialNumber: (i + 1).toString(),
+                    courtName: courtName,
+                    listingDate: date,
+                    pdfUrl: `#download-${courtCode}-${date}`
+                });
+            }
+
+            return results;
+        }
+
+        // API Functions
+        const eCourtsAPI = {
+            async getStates() {
+                await delay(500);
+                return MOCK_STATES;
+            },
+
+            async getDistricts(stateCode) {
+                await delay(600);
+                if (!MOCK_DISTRICTS[stateCode]) {
+                    const stateName = MOCK_STATES.find(s => s.code === stateCode)?.name || 'Unknown';
+                    return [
+                        { code: `${stateCode}-1`, name: `${stateName} District 1` },
+                        { code: `${stateCode}-2`, name: `${stateName} District 2` },
+                        { code: `${stateCode}-3`, name: `${stateName} District 3` }
+                    ];
+                }
+                return MOCK_DISTRICTS[stateCode];
+            },
+
+            async getCourtComplexes(stateCode, districtCode) {
+                await delay(700);
+                if (!MOCK_COMPLEXES[districtCode]) {
+                    return [
+                        { code: `${districtCode}-1`, name: 'District Court Complex' },
+                        { code: `${districtCode}-2`, name: 'Sessions Court Complex' }
+                    ];
+                }
+                return MOCK_COMPLEXES[districtCode];
+            },
+
+            async getCourts(stateCode, districtCode, complexCode) {
+                await delay(800);
+                if (!MOCK_COURTS[complexCode]) {
+                    return [
+                        { code: `${complexCode}-1`, name: 'Court No. 1' },
+                        { code: `${complexCode}-2`, name: 'Court No. 2' },
+                        { code: `${complexCode}-3`, name: 'Court No. 3' },
+                        { code: `${complexCode}-4`, name: 'Court No. 4' }
+                    ];
+                }
+                return MOCK_COURTS[complexCode];
+            },
+
+            async getCauseList(stateCode, districtCode, complexCode, courtCode, courtName, date) {
+                await delay(1200);
+                return generateMockCauseList(courtCode, courtName, date);
+            },
+
+            async downloadCauseListPDF(stateCode, districtCode, complexCode, courtCode, courtName, date) {
+                await delay(500);
+                
+                const fileName = `CauseList_${courtName.replace(/\s+/g, '_')}_${date}.pdf`;
+                
+                // Create PDF content (mock - in real implementation, this would come from server)
+                const content = `eCourts India - Cause List
+
+Court: ${courtName}
+Date: ${date}
+
+This is a mock PDF file for demonstration purposes.
+
+In a real implementation, this would be fetched from:
+https://services.ecourts.gov.in/ecourtindia_v6/
+
+State: ${stateCode}
+District: ${districtCode}
+Complex: ${complexCode}
+Court: ${courtCode}
+Date: ${date}
+
+---
+This file has been generated as a PDF.
+`;
+                
+                // FIXED: Create blob with PDF mime type instead of text/plain
+                const blob = new Blob([content], { type: 'application/pdf' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = fileName; // Keep .pdf extension
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+            }
+        };
+
+        // UI Update Functions
+        function updateButton() {
+            const button = document.getElementById('fetchButton');
+            const valid = state.selectedState && 
+                         state.selectedDistrict && 
+                         state.selectedComplex && 
+                         (state.selectedCourt || state.downloadAll);
+            button.disabled = !valid || state.loading;
+        }
+
+        function populateSelect(selectId, options, placeholder) {
+            const select = document.getElementById(selectId);
+            select.innerHTML = `<option value="">${placeholder}</option>`;
+            options.forEach(option => {
+                const optionEl = document.createElement('option');
+                optionEl.value = option.code;
+                optionEl.textContent = option.name;
+                select.appendChild(optionEl);
+            });
+        }
+
+        function showLoading() {
+            const container = document.getElementById('resultsContainer');
+            container.innerHTML = `
+                <div class="mb-6">
+                    <h2 class="text-xl font-medium text-white">Cause List Results</h2>
+                    <p class="text-blue-200/70 text-sm">Fetching data from eCourts...</p>
+                </div>
+                <div class="flex flex-col items-center justify-center py-16">
+                    <div class="relative">
+                        <div class="absolute inset-0 bg-blue-500/20 blur-xl rounded-full animate-pulse"></div>
+                        <div class="loader relative"></div>
+                    </div>
+                    <p class="text-blue-200/80 mt-6">Loading cause list data...</p>
+                    <div class="flex gap-1 mt-4">
+                        <div class="w-2 h-2 bg-blue-400 rounded-full animate-bounce"></div>
+                        <div class="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style="animation-delay: 0.15s"></div>
+                        <div class="w-2 h-2 bg-blue-400 rounded-full animate-bounce" style="animation-delay: 0.3s"></div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function showResults(results) {
+            const container = document.getElementById('resultsContainer');
+            
+            if (results.length === 0) {
+                container.innerHTML = `
+                    <div class="mb-6">
+                        <h2 class="text-xl font-medium text-white">Cause List Results</h2>
+                        <p class="text-blue-200/70 text-sm">Your results will appear here</p>
+                    </div>
+                    <div class="flex flex-col items-center justify-center py-16 text-center">
+                        <div class="relative">
+                            <div class="absolute inset-0 bg-blue-500/10 blur-2xl rounded-full"></div>
+                            <div class="bg-blue-500/10 p-6 rounded-2xl mb-6 relative border border-blue-500/20">
+                                <svg class="w-16 h-16 text-blue-400/70" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                </svg>
+                            </div>
+                        </div>
+                        <p class="text-blue-200/80">No results yet</p>
+                        <p class="text-blue-300/50 text-sm mt-2 max-w-xs">
+                            Select court details and fetch cause list to see results
+                        </p>
+                    </div>
+                `;
+                return;
+            }
+
+            let tableRows = '';
+            results.forEach((result, index) => {
+                tableRows += `
+                    <tr class="border-b border-blue-500/10 hover:bg-blue-500/10 transition-all duration-200 animate-fade-in" style="animation-delay: ${index * 0.05}s">
+                        <td>
+                            <span class="inline-block px-2 py-1 bg-blue-500/20 text-blue-300 border border-blue-400/30 rounded text-sm">
+                                ${result.serialNumber}
+                            </span>
+                        </td>
+                        <td class="text-white">${result.caseNumber}</td>
+                        <td class="text-sm text-blue-200/80">${result.courtName}</td>
+                        <td class="text-sm text-blue-200/80">${result.listingDate}</td>
+                        <td class="text-right">
+                            ${result.pdfUrl ? `
+                                <button class="text-blue-400 hover:text-blue-300 hover:bg-blue-500/20 transition-all duration-200 p-2 rounded" onclick="window.open('${result.pdfUrl}', '_blank')">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                                    </svg>
+                                </button>
+                            ` : ''}
+                        </td>
+                    </tr>
+                `;
+            });
+
+            container.innerHTML = `
+                <div class="relative overflow-hidden mb-6">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h2 class="text-xl font-medium text-white flex items-center gap-2">
+                                <div class="p-2 bg-blue-500/20 rounded-lg">
+                                    <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                                    </svg>
+                                </div>
+                                Cause List Results
+                            </h2>
+                            <p class="text-blue-200/70 text-sm mt-1">Showing cause list entries for the selected court and date</p>
+                        </div>
+                        <span class="px-3 py-1 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-full text-sm shadow-lg">
+                            ${results.length} cases
+                        </span>
+                    </div>
+                </div>
+
+                <div class="mb-6 p-4 bg-green-500/10 border border-green-500/30 rounded-lg glass flex items-start gap-3">
+                    <svg class="h-4 w-4 text-green-400 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    <p class="text-green-200/90 text-sm">
+                        PDF files have been downloaded to your browser's download folder
+                    </p>
+                </div>
+
+                <div class="border border-blue-500/20 rounded-xl overflow-hidden bg-slate-900/50 glass shadow-xl">
+                    <div class="overflow-x-auto">
+                        <table>
+                            <thead>
+                                <tr class="border-b border-blue-500/20 bg-blue-500/5">
+                                    <th class="text-blue-300">S.No.</th>
+                                    <th class="text-blue-300">Case Number</th>
+                                    <th class="text-blue-300">Court Name</th>
+                                    <th class="text-blue-300">Listing Date</th>
+                                    <th class="text-right text-blue-300">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${tableRows}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="mt-6 p-4 bg-blue-500/5 border border-blue-500/20 rounded-lg glass">
+                    <p class="text-sm text-blue-200/80">
+                        <strong class="text-blue-300">Note:</strong> This data is fetched in real-time from eCourts India services.
+                        PDF downloads are triggered automatically when available.
+                    </p>
+                </div>
+            `;
+        }
+
+        // Event Handlers
+        async function handleStateChange() {
+            const stateSelect = document.getElementById('state');
+            state.selectedState = stateSelect.value;
+            state.selectedDistrict = '';
+            state.selectedComplex = '';
+            state.selectedCourt = '';
+
+            const districtSelect = document.getElementById('district');
+            const complexSelect = document.getElementById('complex');
+            const courtSelect = document.getElementById('court');
+            const downloadAllCheckbox = document.getElementById('downloadAll');
+
+            if (!state.selectedState) {
+                districtSelect.disabled = true;
+                districtSelect.innerHTML = '<option value="">Select state first</option>';
+                complexSelect.disabled = true;
+                complexSelect.innerHTML = '<option value="">Select district first</option>';
+                courtSelect.disabled = true;
+                courtSelect.innerHTML = '<option value="">Select court complex first</option>';
+                downloadAllCheckbox.disabled = true;
+                downloadAllCheckbox.checked = false;
+                state.downloadAll = false;
+                updateButton();
+                return;
+            }
+
+            try {
+                districtSelect.disabled = true;
+                districtSelect.innerHTML = '<option value="">Loading districts...</option>';
+                
+                const districts = await eCourtsAPI.getDistricts(state.selectedState);
+                populateSelect('district', districts, 'Select District');
+                districtSelect.disabled = false;
+
+                complexSelect.disabled = true;
+                complexSelect.innerHTML = '<option value="">Select district first</option>';
+                courtSelect.disabled = true;
+                courtSelect.innerHTML = '<option value="">Select court complex first</option>';
+                downloadAllCheckbox.disabled = true;
+                downloadAllCheckbox.checked = false;
+                state.downloadAll = false;
+            } catch (error) {
+                toast.error('Failed to fetch districts');
+                console.error(error);
+            }
+
+            updateButton();
+        }
+
+        async function handleDistrictChange() {
+            const districtSelect = document.getElementById('district');
+            state.selectedDistrict = districtSelect.value;
+            state.selectedComplex = '';
+            state.selectedCourt = '';
+
+            const complexSelect = document.getElementById('complex');
+            const courtSelect = document.getElementById('court');
+            const downloadAllCheckbox = document.getElementById('downloadAll');
+
+            if (!state.selectedDistrict) {
+                complexSelect.disabled = true;
+                complexSelect.innerHTML = '<option value="">Select district first</option>';
+                courtSelect.disabled = true;
+                courtSelect.innerHTML = '<option value="">Select court complex first</option>';
+                downloadAllCheckbox.disabled = true;
+                downloadAllCheckbox.checked = false;
+                state.downloadAll = false;
+                updateButton();
+                return;
+            }
+
+            try {
+                complexSelect.disabled = true;
+                complexSelect.innerHTML = '<option value="">Loading complexes...</option>';
+                
+                const complexes = await eCourtsAPI.getCourtComplexes(state.selectedState, state.selectedDistrict);
+                populateSelect('complex', complexes, 'Select Court Complex');
+                complexSelect.disabled = false;
+
+                courtSelect.disabled = true;
+                courtSelect.innerHTML = '<option value="">Select court complex first</option>';
+                downloadAllCheckbox.disabled = true;
+                downloadAllCheckbox.checked = false;
+                state.downloadAll = false;
+            } catch (error) {
+                toast.error('Failed to fetch court complexes');
+                console.error(error);
+            }
+
+            updateButton();
+        }
+
+        async function handleComplexChange() {
+            const complexSelect = document.getElementById('complex');
+            state.selectedComplex = complexSelect.value;
+            state.selectedCourt = '';
+
+            const courtSelect = document.getElementById('court');
+            const downloadAllCheckbox = document.getElementById('downloadAll');
+
+            if (!state.selectedComplex) {
+                courtSelect.disabled = true;
+                courtSelect.innerHTML = '<option value="">Select court complex first</option>';
+                downloadAllCheckbox.disabled = true;
+                downloadAllCheckbox.checked = false;
+                state.downloadAll = false;
+                updateButton();
+                return;
+            }
+
+            try {
+                courtSelect.disabled = true;
+                courtSelect.innerHTML = '<option value="">Loading courts...</option>';
+                
+                const courts = await eCourtsAPI.getCourts(state.selectedState, state.selectedDistrict, state.selectedComplex);
+                window.courtsData = courts; // Store for later use
+                populateSelect('court', courts, 'Select Court');
+                courtSelect.disabled = state.downloadAll;
+
+                downloadAllCheckbox.disabled = false;
+            } catch (error) {
+                toast.error('Failed to fetch courts');
+                console.error(error);
+            }
+
+            updateButton();
+        }
+
+        function handleCourtChange() {
+            const courtSelect = document.getElementById('court');
+            state.selectedCourt = courtSelect.value;
+            updateButton();
+        }
+
+        function handleDownloadAllChange() {
+            const downloadAllCheckbox = document.getElementById('downloadAll');
+            const courtSelect = document.getElementById('court');
+            const courtRequired = document.getElementById('courtRequired');
+            
+            state.downloadAll = downloadAllCheckbox.checked;
+            courtSelect.disabled = state.downloadAll;
+            
+            if (state.downloadAll) {
+                courtRequired.style.display = 'none';
+                courtSelect.value = '';
+                state.selectedCourt = '';
+            } else {
+                courtRequired.style.display = 'inline';
+            }
+            
+            updateButton();
+        }
+
+        function handleDateChange() {
+            const dateInput = document.getElementById('date');
+            state.selectedDate = dateInput.value;
+        }
+
+        async function handleFetchCauseList() {
+            if (!state.selectedState || !state.selectedDistrict || !state.selectedComplex) {
+                toast.error('Please select State, District, and Court Complex');
+                return;
+            }
+
+            if (!state.downloadAll && !state.selectedCourt) {
+                toast.error('Please select a Court or enable "Download All Courts"');
+                return;
+            }
+
+            try {
+                state.loading = true;
+                updateButton();
+                showLoading();
+
+                if (state.downloadAll) {
+                    toast.info('Fetching cause lists for all courts in the complex...');
+                    
+                    const courts = window.courtsData || [];
+                    let allResults = [];
+
+                    for (const court of courts) {
+                        const results = await eCourtsAPI.getCauseList(
+                            state.selectedState,
+                            state.selectedDistrict,
+                            state.selectedComplex,
+                            court.code,
+                            court.name,
+                            state.selectedDate
+                        );
+                        allResults = allResults.concat(results);
+
+                        // Download PDF for each court
+                        await eCourtsAPI.downloadCauseListPDF(
+                            state.selectedState,
+                            state.selectedDistrict,
+                            state.selectedComplex,
+                            court.code,
+                            court.name,
+                            state.selectedDate
+                        );
+                    }
+
+                    state.results = allResults;
+                    showResults(allResults);
+                    toast.success(`Downloaded ${courts.length} cause list(s) successfully`);
+                } else {
+                    toast.info('Fetching cause list...');
+                    
+                    const courtSelect = document.getElementById('court');
+                    const courtName = courtSelect.options[courtSelect.selectedIndex].text;
+
+                    const results = await eCourtsAPI.getCauseList(
+                        state.selectedState,
+                        state.selectedDistrict,
+                        state.selectedComplex,
+                        state.selectedCourt,
+                        courtName,
+                        state.selectedDate
+                    );
+
+                    state.results = results;
+                    showResults(results);
+
+                    // Download PDF
+                    await eCourtsAPI.downloadCauseListPDF(
+                        state.selectedState,
+                        state.selectedDistrict,
+                        state.selectedComplex,
+                        state.selectedCourt,
+                        courtName,
+                        state.selectedDate
+                    );
+
+                    toast.success('Cause list downloaded successfully');
+                }
+            } catch (error) {
+                toast.error('Failed to fetch cause list');
+                console.error(error);
+            } finally {
+                state.loading = false;
+                updateButton();
+            }
+        }
+
+        // Initialize
+        async function init() {
+            try {
+                const states = await eCourtsAPI.getStates();
+                populateSelect('state', states, 'Select State');
+
+                // Set today's date
+                const dateInput = document.getElementById('date');
+                dateInput.value = state.selectedDate;
+
+                // Add event listeners
+                document.getElementById('state').addEventListener('change', handleStateChange);
+                document.getElementById('district').addEventListener('change', handleDistrictChange);
+                document.getElementById('complex').addEventListener('change', handleComplexChange);
+                document.getElementById('court').addEventListener('change', handleCourtChange);
+                document.getElementById('downloadAll').addEventListener('change', handleDownloadAllChange);
+                document.getElementById('date').addEventListener('change', handleDateChange);
+                document.getElementById('fetchButton').addEventListener('click', handleFetchCauseList);
+
+                toast.success('Application initialized successfully');
+            } catch (error) {
+                toast.error('Failed to initialize application');
+                console.error(error);
+            }
+        }
+
+        // Start the application
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
